@@ -38,7 +38,7 @@ public class SecurityConfig {
                 // 4. Secure the routes
                 .authorizeHttpRequests(auth -> auth
                         // Allow anyone to hit the login endpoints and error pages
-                        .requestMatchers("/", "/login/**", "/oauth2/**", "/error").permitAll()
+                        .requestMatchers("/", "/login/**", "/oauth2/**", "/error", "/api/auth/**").permitAll() // <-- ADDED HERE
                         // Require authentication for literally everything else
                         .anyRequest().authenticated()
                 )
@@ -64,5 +64,23 @@ public class SecurityConfig {
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
         source.registerCorsConfiguration("/**", configuration);
         return source;
+    }
+    // Allow Spring Security to check local users from the DB
+    @Bean
+    public org.springframework.security.core.userdetails.UserDetailsService userDetailsService(com.contest_manager.auth_service.repository.UserRepository repository) {
+        return usernameOrEmail -> repository.findByUsernameOrEmail(usernameOrEmail, usernameOrEmail)
+                .orElseThrow(() -> new org.springframework.security.core.userdetails.UsernameNotFoundException("User not found"));
+    }
+
+    // The hashing algorithm
+    @Bean
+    public org.springframework.security.crypto.password.PasswordEncoder passwordEncoder() {
+        return new org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder();
+    }
+
+    // The manager that processes the login
+    @Bean
+    public org.springframework.security.authentication.AuthenticationManager authenticationManager(org.springframework.security.config.annotation.authentication.configuration.AuthenticationConfiguration config) throws Exception {
+        return config.getAuthenticationManager();
     }
 }
